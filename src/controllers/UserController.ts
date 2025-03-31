@@ -32,6 +32,9 @@ export async function getUserController(
   }
 }
  
+
+
+
  export async function updateUserController(input: userTypes.UserInput) {
   try {
     // Handle different input types and normalize data

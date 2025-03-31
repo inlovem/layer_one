@@ -1,0 +1,329 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DEV_DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "./generated/postgres"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
+}
+
+
+
+// -----------------------------
+//  Business model
+// -----------------------------
+
+model Business {
+  id          String   @id @default(cuid())
+  ghlId       String
+  name        String
+  phone       String?
+  email       String?
+  website     String?
+  address     String?
+  city        String?
+  description String?
+  state       String?
+  postalCode  String?
+  country     String?
+  updatedBy   String?    
+  createdBy   String?    
+  locationId  String?    
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  location    Location? @relation(fields: [locationId], references: [id])
+}
+
+
+// -----------------------------
+//  Calendar model
+// -----------------------------
+model Calendar {
+  id                                String   @id @default(cuid())
+  // Basic required fields
+  locationId                        String
+  name                              String
+  // A number of fields were shown as optional or only sometimes used:
+  groupId                           String? 
+  description                       String?
+  slug                              String?
+  widgetSlug                        String?
+  calendarType                      String?    // e.g. "round_robin", "event", etc.
+  widgetType                        String?    // e.g. "default", "classic"
+  eventType                         String?    // e.g. RoundRobin_OptimizeForAvailability
+  eventTitle                        String?    // e.g. "{{contact.name}}"
+  eventColor                        String?    // e.g. "#039be5"
+  meetingLocation                   String?
+  slotDuration                      Int?       // e.g. 30
+  slotDurationUnit                  String?    // e.g. "mins"
+  slotInterval                      Int?
+  slotIntervalUnit                  String?
+  slotBuffer                        Int?
+  slotBufferUnit                    String?
+  preBuffer                         Int?
+  preBufferUnit                     String?
+  appoinmentPerSlot                 Int?       // e.g. how many per slot
+  appoinmentPerDay                  Int?
+  allowBookingAfter                 Int?
+  allowBookingAfterUnit             String?
+  allowBookingFor                   Int?
+  allowBookingForUnit               String?
+  enableRecurring                   Boolean?   // default false
+
+  // The "recurring" info is typically nested; you might store in JSON or separate fields
+  freq                              String?
+  count                             Int?
+  bookingOption                     String?
+  bookingOverlapDefaultStatus       String?
+  // Additional config
+  formId                            String?
+  stickyContact                     Boolean?
+  isLivePaymentMode                 Boolean?
+  autoConfirm                       Boolean?
+  shouldSendAlertEmailsToAssignedMember Boolean?
+  alertEmail                        String?
+  googleInvitationEmails            Boolean?
+  allowReschedule                   Boolean?
+  allowCancellation                 Boolean?
+  shouldAssignContactToTeamMember   Boolean?
+  shouldSkipAssigningContactForExisting Boolean?
+  notes                             String?
+  pixelId                           String?
+  formSubmitType                    String?
+  formSubmitRedirectURL             String?
+  formSubmitThanksMessage           String?
+  availabilityType                  Int?       // e.g. 0, 1, or null 
+  guestType                         String?
+  consentLabel                      String?
+  calendarCoverImage                String?
+  // "Look Busy" config can again be stored as separate fields or JSON
+  lookBusyEnabled                   Boolean?
+  lookBusyPercentage                Int?
+  // By the spec, isActive defaults to true
+  isActive                          Boolean?  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  location Location @relation(fields: [locationId], references: [id])
+}
+
+
+
+
+model User {
+  id             String           @id @default(cuid())
+  ghlId         String?          @unique
+  ghlLocationId     String?
+  ghlCompanyId      String?
+  userName       String?
+  firstName      String?
+  lastName       String?
+  email          String?          @unique
+  password       String?
+  phone          String?
+  extension      String?
+  type           String?
+  role           String?
+  isEjectedUser  Boolean?
+  locationIds    String[]
+  permissions    Json?            // Added to store permissions object
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  locations      Location[]
+  LocationMember LocationMember[]
+  locale         String?
+  favorites      Favorite[]       @relation("UserFavorites")
+}
+
+model Location {
+  id              String           @id @default(cuid())
+  ghlAppId           String?
+  name            String
+  email           String?
+  ghlLocationId      String? @unique
+  phone           String?
+  ghlCompanyId       String
+  address         String?
+  city            String?
+  state           String?
+  country         String?
+  postalCode      String?
+  stripeProductId String ?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  members         LocationMember[]
+  User            User?            @relation(fields: [userId], references: [id])
+  userId          String?
+ 
+}
+
+enum Role {
+  owner
+  admin
+  member
+}
+
+
+model Contact {
+  id                    String   @id @default(uuid())
+  ghlId                 String?               
+
+  // Basic Identifiers & Names
+  name                  String?
+  firstName             String?
+  lastName              String?
+  firstNameLowerCase    String?
+  lastNameLowerCase     String?
+  fullNameLowerCase     String?
+
+  // Email & Phone
+  email                 String?
+  additionalEmails      String[]
+  validEmail            Boolean? @default(false)
+  phone                 String?
+  phoneLabel            String?
+  additionalPhones      String[]
+  
+  // Misc Contact Info
+  dnd                   Boolean? @default(false)
+  dndSettings           Json?      // e.g., { "Call": { "status": "...", ... }, "SMS": { ... }, etc. }
+  inboundDndSettings    Json?      // e.g., { "all": { "status": "...", ... } }
+  type                  String?    // often "lead", "read", or other
+  source                String?    // e.g., "public api"
+  assignedTo            String?
+  followers             String[]   // list of user IDs following this contact
+  opportunities         Json?      // store opportunity objects if needed
+
+  // Address & Location
+  locationId            String?
+  address1              String?
+  city                  String?
+  state                 String?
+  postalCode            String?
+  country               String?
+
+  // Business & Company
+  businessId            String?
+  businessName          String?
+  companyName           String?
+
+  // Additional Fields
+  tags                  String[]   // Overwrites contact tags if used by the API
+  customFields          Json?      // e.g. [ { "id": "...", "value": "..." }, ... ]
+  attributionSource     Json?      // e.g. { "url": "Trigger Link", "utmSource": "...", etc. }
+  lastAttributionSource Json?
+
+  // Timestamps & Dates
+  dateOfBirth           DateTime?
+  dateAdded             DateTime?
+  dateUpdated           DateTime?
+  lastActivity          DateTime?
+
+  // Website, Searching, etc.
+  website               String?
+  searchAfter           Json?      // e.g. [ number, string ] used by some APIs
+}
+
+
+
+// -----------------------------
+// Campaign Schema
+// -----------------------------
+model Campaign {
+  id          String   @id @default(dbgenerated()) // or @default(uuid()) if supported
+  name        String?
+  status      String?
+  locationId  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// -----------------------------
+// Company Schema
+// -----------------------------
+model Company {
+  id                            String    @id @default(dbgenerated()) 
+  name                          String
+  email                         String?
+  logoUrl                       String?
+  phone                         String?
+  website                       String?
+  domain                        String?
+  spareDomain                   String?
+  privacyPolicy                 String?
+  termsConditions               String?
+  theme                         String?
+  address                       String?
+  city                          String?
+  postalCode                    String?
+  country                       String?
+  state                         String?
+  timezone                      String?
+  relationshipNumber            String?
+  faviconUrl                    String?
+  subdomain                     String?
+  plan                          Int?
+  currency                      String?
+  customerType                  String?
+  termsOfServiceVersion         String?
+  termsOfServiceAcceptedBy      String?
+  twilioTrialMode               Boolean?
+  twilioFreeCredits             Int?
+  termsOfServiceAcceptedDate    DateTime?    // If you store a DateTime
+  privacyPolicyVersion          String?
+  privacyPolicyAcceptedBy       String?
+  privacyPolicyAcceptedDate     DateTime?
+  affiliatePolicyVersion        String?
+  affiliatePolicyAcceptedBy     String?
+  affiliatePolicyAcceptedDate   DateTime?
+  isReselling                   Boolean?
+  onboardingInfo                Json?        // Or create a nested model, if you prefer
+  stripeId                      String?
+  upgradeEnabledForClients      Boolean?
+  cancelEnabledForClients       Boolean?
+  autoSuspendEnabled            Boolean?
+  saasSettings                  Json?
+  stripeActivePlan              String?
+  stripeConnectId               String?
+  enableDepreciatedFeatures     Boolean?
+  premiumUpgraded               Boolean?
+  status                        String?
+  locationCount                 Int?
+  disableEmailService           Boolean?
+  billingInfo                   Json?        // Or create a nested model if you want strong typing
+  createdAt                     DateTime @default(now())
+  updatedAt                     DateTime @updatedAt
+}
+
+
+
+model Token {
+  id                String   @id @default(cuid())
+  access_token      String?
+  token_type        String   @default("Bearer ")
+  expires_in        Int
+  refresh_token     String?
+  userId            String?
+  approvedLocations String[]
+  scope             String?
+  userType          String?
+  locationId        String?
+  companyId         String?
+  planId            String?
+  updatedAt         DateTime @default(now()) @updatedAt
+}
+
+
+
+model Note {
+  id String @default(cuid())
+  ghlLocationId String
+  ghlId String
+  ghlContactId String
+  locationId String
+  contactId String
+  body String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

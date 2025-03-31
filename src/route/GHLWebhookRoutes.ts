@@ -185,7 +185,58 @@ export const GHLWebhookRoutes: FastifyPluginAsync = async (
               }
               break;
 
-
+          case "OutboundMessage":
+            try {
+              switch (payload.messageType) {
+                case "SMS": {
+                  const smsMessage: SMSMessage = {
+                    type: "OutboundMessage",
+                    ...payload,
+                    messageType: "SMS",
+                  };
+                  await Controller.handleOutboundSMS(smsMessage);
+                  console.log(`Outbound SMS processed: ${payload.contactId}`);
+                  break;
+                }
+                case "CALL": {
+                  const callMessage: CallMessage = {
+                    type: "OutboundMessage",
+                    ...payload,
+                    messageType: "CALL",
+                  };
+                  await Controller.handleOutboundCall(callMessage);
+                  console.log(`Outbound Call processed: ${payload.contactId}`);
+                  break;
+                }
+                case "Email": {
+                  const emailMessage: EmailMessage = {
+                    type: "OutboundMessage",
+                    ...payload,
+                    messageType: "Email",
+                  };
+                  await Controller.handleOutboundEmail(emailMessage);
+                  console.log(`Outbound Email processed: ${payload.contactId}`);
+                  break;
+                }
+                case "VOICEMAIL": {
+                  const voicemailMessage: CallMessage = {
+                    type: "OutboundMessage",
+                    ...payload,
+                    messageType: "VOICEMAIL",
+                  };
+                  await Controller.handleOutboundVoicemail(voicemailMessage);
+                  console.log(`Outbound Voicemail processed: ${payload.contactId}`);
+                  break;
+            }
+                default:
+                  console.error("Unsupported outbound message type:", payload.messageType);
+              }
+            }
+            catch (err) {
+              console.error("Error processing outbound message:", err);
+              throw err;
+            }
+          break;
 
           default:
             console.log(`Unhandled GHL event type: ${eventType}`);

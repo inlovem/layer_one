@@ -21,20 +21,20 @@
     }
   },
   "scripts": {
-    "start": "node --loader ts-node/esm ./src/index.ts",
-    "dev": "nodemon --exec 'node --loader ts-node/esm ./src/index.ts'",
-    "build": "tsc && prisma generate --schema src/prisma/schema.prisma",
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "format": "prisma format --schema src/prisma/schema.prisma",
-    "dev-migrate:init": "prisma migrate dev --name init --schema src/prisma/schema.prisma",
-    "dev-migrate:optional": "prisma migrate dev --schema src/prisma/schema.prisma",
-    "migrate": "prisma migrate deploy --schema=./src/prisma/schema.prisma",
-    "generate": "prisma generate --schema src/prisma/schema.prisma",
-    "rollback": "prisma migrate rollback",
-    "deploy": "yarn install --ignore-engines && yarn build && node --loader ts-node/esm ./src/index.ts"
-  },
+      "start": "node --loader ts-node/esm ./src/index.ts",
+      "dev": "nodemon --exec 'node --loader ts-node/esm ./src/index.ts'",
+      "build": "tsc && yarn generate",
+      "format": "prisma format --schema src/prisma/postgres.prisma && prisma format --schema src/prisma/mongo.prisma",
+      "generate": "prisma generate --schema src/prisma/postgres.prisma && prisma generate --schema src/prisma/mongo.prisma",
+      "dev-migrate:init": "prisma migrate dev --name init --schema src/prisma/postgres.prisma && prisma db push --schema src/prisma/mongo.prisma",
+      "dev-migrate:optional": "prisma migrate dev --schema src/prisma/postgres.prisma && prisma db push --schema src/prisma/mongo.prisma",
+      "deploy": "yarn prisma:deploy && yarn build && node --loader ts-node/esm ./src/index.ts",
+      "prisma:deploy": "prisma migrate deploy --schema src/prisma/postgres.prisma && prisma db push --schema src/prisma/mongo.prisma",
+      "migrate": "prisma migrate deploy --schema src/prisma/postgres.prisma && prisma db push --schema src/prisma/mongo.prisma",
+      "rollback": "prisma migrate rollback --schema src/prisma/postgres.prisma",
+      "test": "echo \"Error: no test specified\" && exit 1"
+    },
   "dependencies": {
-    "@azure/identity": "^4.5.0",
     "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^10.0.2",
     "@fastify/jwt": "^9.0.3",
@@ -46,10 +46,8 @@
     "@sinclair/typebox": "^0.32.14",
     "@types/body-parser": "^1.19.5",
     "@types/crypto-js": "^4.2.2",
-    "@types/fastify-jwt": "^0.8.1",
     "@types/node-cron": "^3.0.11",
     "@types/node-schedule": "^2.1.7",
-    "@types/redis": "^4.0.11",
     "@types/uuid": "^9.0.8",
     "axios": "^1.6.7",
     "body-parser": "^1.20.3",
@@ -66,11 +64,9 @@
     "openai": "^4.38.5",
     "pg": "^8.11.3",
     "prisma": "^6.2.1",
-    "redis": "^4.6.12",
     "slug": "^8.2.3",
     "stripe": "^15.5.0",
-    "toad-scheduler": "^3.0.1",
-    "zustand": "^4.4.7"
+    "toad-scheduler": "^3.0.1"
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.5",
