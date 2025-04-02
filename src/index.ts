@@ -1,12 +1,11 @@
 import app from './app.js';
-import { connectToDb } from './utils/databaseUtils.js';
 import { schedulerPlugin } from './utils/scheduler.js';
 
 const FASTIFY_PORT = Number(process.env.FASTIFY_PORT) || 8080;
 
 const startServer = async (): Promise<void> => {
   try {
-    await connectToDb();
+
 
     // Register the scheduler plugin before starting the server.
     await app.register(schedulerPlugin);

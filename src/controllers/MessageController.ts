@@ -1,9 +1,9 @@
-import { prisma } from "../utils/prismaClient";
+import admin from "src/utils/firebase";
 import {CallMessage, EmailMessage, SMSMessage } from "../types/messageTypes";
 
 
 export async function handleInboundSMS(message : SMSMessage){
-  
+
 
 
 
