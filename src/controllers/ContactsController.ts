@@ -1,5 +1,5 @@
 import { Contact, Note } from "src/types/contactTypes.js";
-import admin from "src/utils/firebase.js";
+import admin from "../utils/firebase.js";
 
 //
 // Upsert Contact

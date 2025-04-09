@@ -1,4 +1,4 @@
-export * from './ContactSchemas'
-export * from './UserSchemas'
+export * from './ContactSchemas.js'
+export * from './UserSchemas.js'
 
 

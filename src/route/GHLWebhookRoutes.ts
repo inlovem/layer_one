@@ -6,9 +6,9 @@ import {
   FastifyReply,
   FastifyPluginAsync,
 } from "fastify";
-import * as Controller from "../controllers/index";
-import { Contact, Note } from "src/types/contactTypes";
-import { CallMessage, EmailMessage, SMSMessage } from "src/types/messageTypes";
+import * as Controller from "../controllers/index.js";
+import { Contact, Note } from "src/types/contactTypes.js";
+import { CallMessage, EmailMessage, SMSMessage } from "src/types/messageTypes.js";
 
 export const GHLWebhookRoutes: FastifyPluginAsync = async (
   fastify: FastifyInstance

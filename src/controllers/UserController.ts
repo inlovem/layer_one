@@ -1,7 +1,7 @@
 // src/controllers/UserController.ts
 import { FastifyRequest, FastifyReply } from 'fastify';
-import admin from 'src/utils/firebase';
-import * as userTypes from '../types/userTypes';
+import admin from '../utils/firebase.js';
+import * as userTypes from '../types/userTypes.js';
 
 /**
  * Retrieves a user by userId from Firestore.

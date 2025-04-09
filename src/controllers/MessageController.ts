@@ -1,5 +1,4 @@
-import admin from "src/utils/firebase";
-import {CallMessage, EmailMessage, SMSMessage } from "../types/messageTypes";
+import {CallMessage, EmailMessage, SMSMessage } from "../types/messageTypes.js";
 
 
 export async function handleInboundSMS(message : SMSMessage){

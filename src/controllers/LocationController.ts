@@ -1,5 +1,5 @@
 // src/controllers/LocationController.ts
-import admin from "src/utils/firebase";
+import admin from "../utils/firebase.js";
 
 interface LocationInput {
   type: 'LocationCreate' | 'LocationUpdate' | 'INSTALL';
