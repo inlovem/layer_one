@@ -24,6 +24,11 @@ export async function handleInitialInstall(
 
     // Fetch location tokens after a successful token exchange
     await attemptFetchLocationToken(companyTokenData.companyId, companyTokenData.access_token);
+
+    //maybe send access token
+    return reply.send({ success: true, companyId: companyTokenData.companyId });
+
+
   } catch (error) {
     console.error("Token exchange error:", error);
     return reply.status(500).send({
@@ -173,6 +178,10 @@ export const getGHLToken = async (
     const encodedParams = new URLSearchParams();
     encodedParams.set('companyId', token.companyId);
     encodedParams.set('locationId', token.locationId);
+
+    console.log('📨 Making token request with code:', code);
+    console.log('📨 Params:', encodedParams.toString());
+
     const options = {
       method: 'POST',
       url: 'https://services.leadconnectorhq.com/oauth/locationToken',
@@ -186,11 +195,18 @@ export const getGHLToken = async (
     };
     try {
       const { data } = await axios.request(options);
+      console.log('📥 Company token exchange success:', data);
       await updateAccessToken(data);
       return data;
-    } catch (error) {
-      throw error;
+    } catch (err: any) {
+      console.error('❌ GHL token exchange error:');
+      console.error('↳ Message:', err.message);
+      console.error('↳ Status:', err.response?.status);
+      console.error('↳ Response Data:', err.response?.data);
+      console.error('↳ Headers:', err.response?.headers);
+      throw err;
     }
+    
   } else {
     const encodedParams = new URLSearchParams({
       client_id: process.env.GOHL_CLIENT_ID!,
@@ -198,7 +214,7 @@ export const getGHLToken = async (
       grant_type: grant_type,
       code: code || '',
       refresh_token: token ? token.refresh_token || '' : '',
-      redirect_uri: '',
+      redirect_uri: process.env.GOHL_REDIRECT_URI!,
       user_type: 'Company',
     });
     const options = {
@@ -215,9 +231,10 @@ export const getGHLToken = async (
       console.log('Company token exchange:', data);
       await updateAccessToken(data);
       return data;
-    } catch (error) {
-      throw error;
-    }
+    } catch (err: any) {
+      console.error('Token exchange error:', err?.response?.data || err.message);
+      throw err; // bubble up for visibility
+    }    
   }
 };
 
