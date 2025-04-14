@@ -21,7 +21,6 @@ export const GHLWebhookRoutes: FastifyPluginAsync = async (
         const payload = request.body as any;
         const eventType = payload.type;
         console.log(`Received GHL webhook event: ${eventType}`, payload);
-
         switch (eventType) {
           case "INSTALL":
             try {

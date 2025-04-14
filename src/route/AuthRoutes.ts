@@ -4,6 +4,7 @@ import {
   FastifyInstance,
 } from "fastify";
 import * as AuthController from "../controllers/index";
+import  * as schemas from "../schema/AuthSchemas";
 const authPath = "/auth";
 
 /**
@@ -19,12 +20,14 @@ export async function AuthRoutes (
   fastify.route({
     method: "POST",
     url: `${authPath}/exchange-code`,
+    schema: schemas.ExchangeCodeSchema,
     handler: AuthController.handleInitialInstall
   });
 
   fastify.route({
     method: "POST",
     url: `${authPath}/validate-sso`,
+    schema: schemas.ValidateSsoSchema,
     handler: AuthController.validateSsoController
   });
 };

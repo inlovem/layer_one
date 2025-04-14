@@ -9,6 +9,18 @@ import { FastifyRequest, FastifyReply } from "fastify";
 
 /**
  * Handles the initial installation of the application by exchanging an authorization code for a token.
+ * This is the first step in the OAuth flow.
+ * 
+ * @param request - The Fastify request object containing the authorization code.
+ * 
+ * @param reply - The Fastify reply object used to send the response.
+ * @returns A response indicating success or failure.
+ * @throws An error if the token exchange fails.
+ * @throws An error if the token data is missing required fields.
+ * @throws An error if the SSO token decryption fails.
+ * @throws An error if the user update fails.
+ * @throws An error if the JWT creation fails.
+ * 
  */
 export async function handleInitialInstall(
   request: FastifyRequest<{ Body: { code: string } }>,
@@ -21,13 +33,11 @@ export async function handleInitialInstall(
     if (!companyTokenData || !companyTokenData.companyId || !companyTokenData.access_token) {
       throw new Error('Missing companyId or access_token from the company token data!');
     }
+    
 
-    // Fetch location tokens after a successful token exchange
     await attemptFetchLocationToken(companyTokenData.companyId, companyTokenData.access_token);
 
-    //maybe send access token
-    return reply.send({ success: true, companyId: companyTokenData.companyId });
-
+    return reply.send({ success: true, companyId: companyTokenData.companyId, redirectUri: process.env.GOHL_REDIRECT_URI });
 
   } catch (error) {
     console.error("Token exchange error:", error);
@@ -39,6 +49,13 @@ export async function handleInitialInstall(
 
 /**
  * Validates the SSO token and creates a JWT for the user.
+ * 
+ * @param request - The Fastify request object containing the SSO token.
+ * @param reply - The Fastify reply object used to send the response.
+ * @returns A response containing the user data and JWT token.
+ * @throws An error if the SSO token decryption fails.
+ * @throws An error if the user update fails.
+ * @throws An error if the JWT creation fails.
  */
 export const validateSsoController = async (
   request: FastifyRequest<{ Body: { ssoToken: string } }>,
@@ -69,6 +86,10 @@ export const validateSsoController = async (
 
 /**
  * Creates a JWT for the user.
+ * 
+ * @param userData - The user data to include in the JWT payload.
+ * @returns The generated JWT token.
+ * @throws An error if the JWT creation fails.
  */
 const createJwtForUser = (userData: any): string => {
   const JWT_SECRET = process.env.JWT_SECRET || '';
@@ -83,6 +104,12 @@ const createJwtForUser = (userData: any): string => {
 
 /**
  * Helper function that decrypts the SSO token using CryptoJS.
+ * 
+ * @param encryptedToken - The encrypted SSO token.
+ * @returns The decrypted user data.
+ * @throws An error if the decryption fails.
+ * @throws An error if the user update fails.
+ * @throws An error if the JWT creation fails.
  */
 async function decryptSSO(encryptedToken: string): Promise<any> {
   const SSO_KEY = process.env.GHL_SSO_KEY || '';
@@ -120,6 +147,12 @@ async function decryptSSO(encryptedToken: string): Promise<any> {
 
 /**
  * Attempts to fetch tokens for all locations related to a given company.
+ * 
+ * @param companyId - The ID of the company.
+ * @param access_token - The access token for the company.
+ * @param retriesLeft - The number of retries left (default is 3).
+ * @returns A promise that resolves when the tokens have been fetched.
+ * @throws An error if the token fetching fails.
  */
 export async function attemptFetchLocationToken(
   companyId: string,
@@ -141,6 +174,12 @@ export async function attemptFetchLocationToken(
 
 /**
  * Fetches all locations for the given company from Firestore and attempts to retrieve tokens.
+ * 
+ * @param companyId - The ID of the company.
+ * @param access_token - The access token for the company.
+ * @returns A promise that resolves when the tokens have been fetched.
+ * @throws An error if the token fetching fails.
+ * @throws An error if the token update fails.
  */
 async function getLocationTokens(companyId: string, access_token?: string): Promise<any> {
   const db = admin.firestore();
@@ -167,6 +206,14 @@ async function getLocationTokens(companyId: string, access_token?: string): Prom
 /**
  * Retrieves a token from GHL. If token details are provided for a Location,
  * the appropriate endpoint is called; otherwise, the Company token endpoint is used.
+ * 
+ * @param grant_type - The type of grant (e.g., 'authorization_code').
+ * @param code - The authorization code (optional).
+ * @param token - The token details (optional).
+ * @param auth_token - The authorization token (optional).
+ * @returns A promise that resolves to the token data.
+ * @throws An error if the token exchange fails.
+ * @throws An error if the token update fails.
  */
 export const getGHLToken = async (
   grant_type: string,
@@ -241,6 +288,11 @@ export const getGHLToken = async (
 /**
  * Updates (or creates) a token in Firestore based on the provided token data.
  * Checks for undefined values and uses Firestore queries to simulate upsert behavior.
+ * 
+ * @param token - The token data to update or create.
+ * @throws An error if the companyId is missing in the token data.
+ * @throws An error if the locationId is missing in the token data.
+ * 
  */
 async function updateAccessToken(token: Partial<Token>) {
   // Remove any extraneous properties
@@ -309,6 +361,12 @@ async function updateAccessToken(token: Partial<Token>) {
 /**
  * Creates location tokens by finding a company token (with locationId set to null)
  * and then calling getGHLToken with a Location payload.
+ * 
+ * @param location_id - The ID of the location.
+ * @param company_id - The ID of the company.
+ * @returns A promise that resolves to the location token data.
+ * @throws An error if no company token is found.
+ * @throws An error if the token update fails.
  */
 export async function createLocationTokens(
   location_id: string,

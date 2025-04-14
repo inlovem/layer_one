@@ -8,27 +8,30 @@ import {
   ERROR404,
   ERROR409,
   ERROR500,
-  responseProperty,
 } from "../constants/constants";
 
-
 export const GetUserSchema: FastifySchema = {
+  description: 'Get user information by user ID',
+  tags: ['user'],
+  summary: 'Retrieve details for a specific user',
+  
   querystring: Type.Object({
-    userId: Type.String()
+    userId: Type.String({ description: 'The unique identifier of the user' })
   }),
   response: {
     200: Type.Object({
       user: Type.Object({
-        id: Type.String(),
-        email: Type.String(),
-        phone: Type.Optional(Type.String()),
-        firstName: Type.Optional(Type.String()),
-        lastName: Type.Optional(Type.String()),
-        name: Type.Optional(Type.String()),
-        status: Type.Optional(Type.String()),
-        type: Type.Optional(Type.String()),
+        id: Type.String({ description: 'Unique user identifier' }),
+        email: Type.String({ description: 'User email address' }),
+        phone: Type.Optional(Type.String({ description: 'User phone number' })),
+        firstName: Type.Optional(Type.String({ description: 'User first name' })),
+        lastName: Type.Optional(Type.String({ description: 'User last name' })),
+        name: Type.Optional(Type.String({ description: 'User full name' })),
+        status: Type.Optional(Type.String({ description: 'Account status' })),
+        type: Type.Optional(Type.String({ description: 'Account type' })),
       }),
-    }),
+    }, { description: 'Successful user retrieval' }),
+    
     400: ERROR400,
     401: ERROR401,
     404: ERROR404,
