@@ -9,7 +9,7 @@ const server = fastify({
   logger: process.env.NODE_ENV !== 'development',
 });
 
-const FASTIFY_PORT = Number(process.env.FASTIFY_PORT) || 8080;
+const PORT = Number(process.env.PORT) || 8080;
 
 server.register(fjwt, { secret: process.env.JWT_SECRET || 'default_secret' });
 server.register(fCookie, { secret: process.env.COOKIE_SECRET || 'some-secret-key' });
@@ -20,9 +20,9 @@ const startServer = async (): Promise<void> => {
   try {
     // Register the scheduler plugin before starting the server.
     await server.register(schedulerPlugin);
-    await server.listen({ port: FASTIFY_PORT, host: '0.0.0.0' });
+    await server.listen({ port: PORT, host: '0.0.0.0' });
     
-    console.log(`Server listening at http://0.0.0.0:${FASTIFY_PORT}`);
+    console.log(`Server listening at http://0.0.0.0:${PORT}`);
   } catch (err) {
     console.error('Failed to start the server:', err);
     process.exit(1);
