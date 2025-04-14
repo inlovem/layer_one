@@ -1,15 +1,11 @@
 // src/routes/UserRoutes.ts
 
-import * as UserController from '../controllers/index.js';
+import * as UserController from '../controllers/index';
 import {
-  FastifyInstance,
-  FastifyPluginAsync,
-  FastifyReply,
-  FastifyRequest,
-  FastifyPluginOptions
+  FastifyInstance
 } from 'fastify';
-import * as schema from '../schema/index.js';
-import { authenticateUser } from '../utils/authenticatUser.js';
+import * as schema from '../schema/index';
+import { authenticateUser } from '../utils/authenticatUser';
 
 const userPath = '/user';
 

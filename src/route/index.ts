@@ -1,3 +1,3 @@
-export * from './UserRoutes.js'
-export * from './AuthRoutes.js'
-export * from './GHLWebhookRoutes.js'
+export * from './UserRoutes'
+export * from './AuthRoutes'
+export * from './GHLWebhookRoutes'

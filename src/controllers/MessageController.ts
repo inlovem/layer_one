@@ -1,4 +1,4 @@
-import {CallMessage, EmailMessage, SMSMessage } from "../types/messageTypes.js";
+import {CallMessage, EmailMessage, SMSMessage } from "../types/messageTypes";
 
 
 export async function handleInboundSMS(message : SMSMessage){

@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify'
-import { UserRoutes } from './UserRoutes.js'
-import { AuthRoutes } from './AuthRoutes.js'
-import { GHLWebhookRoutes } from './GHLWebhookRoutes.js'
+import { UserRoutes } from './UserRoutes'
+import { AuthRoutes } from './AuthRoutes'
+import { GHLWebhookRoutes } from './GHLWebhookRoutes'
 
 export default async function router(fastify: FastifyInstance):Promise<void> {
   console.log('Routes registered')

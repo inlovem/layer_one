@@ -3,7 +3,7 @@
 import {
   FastifyInstance,
 } from "fastify";
-import * as AuthController from "../controllers/index.js";
+import * as AuthController from "../controllers/index";
 const authPath = "/auth";
 
 /**

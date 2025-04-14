@@ -1,6 +1,6 @@
 // src/controllers/index.ts
-export * from './UserController.js'
-export * from './AuthController.js'
-export * from './LocationController.js'
-export * from './ContactsController.js'
-export * from './MessageController.js'
+export * from './UserController'
+export * from './AuthController'
+export * from './LocationController'
+export * from './ContactsController'
+export * from './MessageController'

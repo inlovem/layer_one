@@ -1,8 +1,8 @@
 import axios from 'axios';
 import CryptoJS from 'crypto-js';
-import { updateUserController } from './UserController.js';
-import { Token } from "../types/types.js";
-import admin from '../utils/firebase.js';
+import { updateUserController } from './UserController';
+import { Token } from "../types/types";
+import admin from '../utils/firebase';
 import { Partial } from "@sinclair/typebox";
 import jwt from 'jsonwebtoken';
 import { FastifyRequest, FastifyReply } from "fastify";

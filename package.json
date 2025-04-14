@@ -2,29 +2,22 @@
   "name": "layer_one",
   "version": "0.1.1",
   "description": "Layer One API for use in GHL connections, hooks, and API calls for GHL APi V2",
-  "private": true,
-  "type": "module",
-  "main": "./dist/index.js",
-  "module": "./dist/index.mjs",
-  "types": "./dist/index.d.ts",
-  "yarn": {
-    "ignore-engines": true
+  "main": "index.ts",
+  "engines": {
+    "node": "20.x"
   },
-  "exports": {
-    ".": {
-      "require": "./dist/index.js",
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.mjs"
-    },
-    "./src": {
-      "default": "./src/index.ts"
-    }
-    },
+  "packageManager": "yarn@1.22.22",
   "scripts": {
-    "dev": "NODE_OPTIONS='--loader ts-node/esm' nodemon src/index.ts",
-    "build": "tsc",
-    "start": "node ./dist/index.js"
+    "dev": "nodemon --watch 'src/**/*.ts' --exec 'ts-node' ./src/index.ts",
+    "heroku-postbuild": "npm run build",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "test": "jest --coverage"
   },
+  "private": true,
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^10.0.2",
@@ -60,12 +53,12 @@
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.5",
-    "@types/node": "^22.10.5",
+    "@types/node": "^22.13.1",
     "@types/pg": "^8.11.0",
     "@types/slug": "^5.0.7",
     "nodemon": "^3.0.3",
     "ts-node": "^10.9.2",
     "tsup": "^8.0.2",
-    "typescript": "^5.8.3"
+    "typescript": "^5.7.3"
   }
 }

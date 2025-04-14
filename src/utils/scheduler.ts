@@ -1,11 +1,11 @@
 // src/utils/scheduler.ts
 import { CronJob, AsyncTask } from 'toad-scheduler';
 import fastifySchedule from '@fastify/schedule';
-import admin from './firebase.js';
-import { getGHLToken, attemptFetchLocationToken } from '../controllers/AuthController.js';
+import admin from './firebase';
+import { getGHLToken, attemptFetchLocationToken } from '../controllers/AuthController';
 import { FastifyInstance } from 'fastify';
 import { Timestamp } from 'firebase-admin/firestore';
-import type { Token as BaseToken } from '../types/types.js'; // Adjust path to where your Token type lives
+import type { Token as BaseToken } from '../types/types'; // Adjust path to where your Token type lives
 
 const db = admin.firestore();
 const TWELVE_HOURS_MS = 12 * 3600 * 1000;

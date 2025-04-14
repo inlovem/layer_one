@@ -9,7 +9,7 @@ import {
   ERROR409,
   ERROR500,
   responseProperty,
-} from "../constants/constants.js";
+} from "../constants/constants";
 
 export const GetContactsSchema: FastifySchema = {
   params: Type.Object({

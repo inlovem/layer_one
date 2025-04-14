@@ -1,3 +1,3 @@
 
-export * from './aiFunctions.js'
+export * from './aiFunctions'
 
