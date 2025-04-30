@@ -1,58 +1,3 @@
-export type User = {
-  id: string;
-  ghlUserId?: string | null;
-  ghlLocationId?: string;
-  firstName: string;
-  lastName: string;
-  email: string;
-  phone: string;
-  extension?: string;
-  type?: string;
-  role?: string;
-  isEjectedUser?: boolean;
-  ghlLocationIds?: string[];
-  ghlLocations?: Location[];
-  locale?: string;
-  permissions?: {
-    adwordsReportingEnabled?: boolean;
-    affiliateManagerEnabled?: boolean;
-    agentReportingEnabled?: boolean;
-    appointmentsEnabled?: boolean;
-    assignedDataOnly?: boolean;
-    attributionsReportingEnabled?: boolean;
-    bloggingEnabled?: boolean;
-    botService?: boolean;
-    bulkRequestsEnabled?: boolean;
-    campaignsEnabled?: boolean;
-    campaignsReadOnly?: boolean;
-    cancelSubscriptionEnabled?: boolean;
-    communitiesEnabled?: boolean;
-    contactsEnabled?: boolean;
-    contentAiEnabled?: boolean;
-    conversationsEnabled?: boolean;
-    dashboardStatsEnabled?: boolean;
-    facebookAdsReportingEnabled?: boolean;
-    funnelsEnabled?: boolean;
-    invoiceEnabled?: boolean;
-    leadValueEnabled?: boolean;
-    marketingEnabled?: boolean;
-    membershipEnabled?: boolean;
-    onlineListingsEnabled?: boolean;
-    opportunitiesEnabled?: boolean;
-    paymentsEnabled?: boolean;
-    phoneCallEnabled?: boolean;
-    recordPaymentEnabled?: boolean;
-    refundsEnabled?: boolean;
-    reviewsEnabled?: boolean;
-    settingsEnabled?: boolean;
-    socialPlanner?: boolean;
-    tagsEnabled?: boolean;
-    triggersEnabled?: boolean;
-    websitesEnabled?: boolean;
-    workflowsEnabled?: boolean;
-    workflowsReadOnly?: boolean;
-  };
- };
 
 
  export type UserBaseInput = {
@@ -75,10 +20,11 @@ export type User = {
 
 // For webhook/API inputs
 export type WebhookUserInput = UserBaseInput & {
-  type: 'UserCreate' | 'UserUpdate';
+  type: 'UserCreate';
   userName?: string;
   activeLocation?: string;
   userId?: string;
+  updatedAt?: Date;
 };
 
 // For SSO inputs
@@ -94,6 +40,81 @@ export type AdminUserInput = UserBaseInput & {
   password?: string;
   isEjectedUser?: boolean;
 };
+
+
+
+
+export interface UserPermissions {
+  campaignsEnabled: boolean;
+  campaignsReadOnly: boolean;
+  contactsEnabled: boolean;
+  workflowsEnabled: boolean;
+  workflowsReadOnly: boolean;
+  triggersEnabled: boolean;
+  funnelsEnabled: boolean;
+  websitesEnabled: boolean;
+  opportunitiesEnabled: boolean;
+  dashboardStatsEnabled: boolean;
+  bulkRequestsEnabled: boolean;
+  appointmentsEnabled: boolean;
+  reviewsEnabled: boolean;
+  onlineListingsEnabled: boolean;
+  phoneCallEnabled: boolean;
+  conversationsEnabled: boolean;
+  assignedDataOnly: boolean;
+  adwordsReportingEnabled: boolean;
+  membershipEnabled: boolean;
+  facebookAdsReportingEnabled: boolean;
+  attributionsReportingEnabled: boolean;
+  settingsEnabled: boolean;
+  tagsEnabled: boolean;
+  leadValueEnabled: boolean;
+  marketingEnabled: boolean;
+  agentReportingEnabled: boolean;
+  botService: boolean;
+  socialPlanner: boolean;
+  bloggingEnabled: boolean;
+  invoiceEnabled: boolean;
+  affiliateManagerEnabled: boolean;
+  contentAiEnabled: boolean;
+  refundsEnabled: boolean;
+  recordPaymentEnabled: boolean;
+  cancelSubscriptionEnabled: boolean;
+  paymentsEnabled: boolean;
+  communitiesEnabled: boolean;
+  exportPaymentsEnabled: boolean;
+}
+
+export interface UserRoles {
+  type: string;
+  role: string;
+  locationIds: string[];
+  restrictSubAccount: string;
+}
+
+export interface LcPhone {
+  locationId: string;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  extension: string;
+  permissions: UserPermissions;
+  scopes: string;
+  roles: UserRoles;
+  deleted: boolean;
+  lcPhone: LcPhone;
+}
+
+export interface UsersResponse {
+  users: User[];
+}
+
 
 // Union type for all user inputs
 export type UserInput = WebhookUserInput | SSOUserInput | AdminUserInput;

@@ -10,8 +10,6 @@ export interface UserPayload {
 const SECRET_KEY = process.env.JWT_SECRET || "your_secret_key";
 
 
-
-
 /**
  * Authenticates the user by verifying the JWT token in the Authorization header.
  * Attaches the user to the request object on success.
@@ -26,7 +24,6 @@ export const authenticateUser = async (
 ) => {
   try {
     const authHeader = request.headers.authorization;
-    
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       reply
         .code(401)

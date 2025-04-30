@@ -21,7 +21,7 @@ export async function AuthRoutes (
     method: "POST",
     url: `${authPath}/exchange-code`,
     schema: schemas.ExchangeCodeSchema,
-    handler: AuthController.handleInitialInstall
+    handler: AuthController.exchangeCodeController
   });
 
   fastify.route({

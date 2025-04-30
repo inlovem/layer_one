@@ -2,13 +2,14 @@
 import { CronJob, AsyncTask } from 'toad-scheduler';
 import fastifySchedule from '@fastify/schedule';
 import admin from './firebase';
-import { getGHLToken, attemptFetchLocationToken } from '../controllers/AuthController';
+import { tokenService } from '../services/TokenService';
 import { FastifyInstance } from 'fastify';
 import { Timestamp } from 'firebase-admin/firestore';
-import type { Token as BaseToken } from '../types/types'; // Adjust path to where your Token type lives
+import type { AuthRes as BaseToken } from '../types/types'; // Adjust path to where your Token type lives
+import { locationService } from '../services/LocationService';
 
 const db = admin.firestore();
-const TWELVE_HOURS_MS = 12 * 3600 * 1000;
+const ONE_MINUTES_MS = 1 * 60 * 1000;
 
 // -----------------------------
 // Extend your Token type to include updatedAt
@@ -56,15 +57,15 @@ async function refreshCompanyTokens() {
     const expiryTime = updatedAtMs + tokenLifetimeMs;
     const now = Date.now();
 
-    if (expiryTime < now + TWELVE_HOURS_MS) {
+    if (expiryTime < now + ONE_MINUTES_MS) {
       console.log(`[Cron] Refreshing Company token ${token.id} for companyId=${token.companyId}`);
       try {
-        const refreshedCompanyToken = await getGHLToken('refresh_token', '', token, '');
+        const refreshedCompanyToken = await tokenService.getGHLToken('refresh_token', '', token, '');
         console.log(`✔️ [Cron] Company token refreshed: ${token.id}`);
 
         if (refreshedCompanyToken.access_token && token.companyId) {
           console.log(`[Cron] Fetching location tokens for companyId=${token.companyId}`);
-          await attemptFetchLocationToken(token.companyId, refreshedCompanyToken.access_token);
+          await locationService.attemptFetchLocationToken(token.companyId, refreshedCompanyToken.access_token);
         }
       } catch (err) {
         console.error(`Error refreshing Company token ${token.id}:`, err);
@@ -98,7 +99,7 @@ async function refreshLocationTokens() {
     const expiryTime = updatedAtMs + tokenLifetimeMs;
     const now = Date.now();
 
-    if (expiryTime < now + TWELVE_HOURS_MS) {
+    if (expiryTime < now + ONE_MINUTES_MS) {
       console.log(`[Cron] Refreshing Location token ${token.id}, locationId=${token.locationId}`);
       try {
         const companySnap = await db
@@ -115,7 +116,7 @@ async function refreshLocationTokens() {
           continue;
         }
 
-        await getGHLToken('', '', token, companyToken.access_token);
+        await tokenService.getGHLToken('', '', token, companyToken.access_token);
       } catch (err) {
         console.error(`Error refreshing Location token ${token.id}:`, err);
       }
@@ -131,8 +132,9 @@ const tokenRefreshTask = new AsyncTask('Token Refresh Task', async (taskId) => {
   await checkAndRefreshTokens();
 });
 
+// Changed to run every minute for testing purposes
 const tokenRefreshJob = new CronJob(
-  { cronExpression: '0 * * * *' },
+  { cronExpression: '* * * * *' },
   tokenRefreshTask
 );
 
@@ -140,6 +142,20 @@ export async function schedulerPlugin(fastifyInstance: FastifyInstance) {
   fastifyInstance.register(fastifySchedule);
   fastifyInstance.addHook('onReady', () => {
     fastifyInstance.scheduler.addCronJob(tokenRefreshJob);
-    fastifyInstance.log.info('Token refresh cron job has been scheduled.');
+    fastifyInstance.log.info('Token refresh cron job has been scheduled to run every minute for testing.');
+    
+    // Run immediately for testing
+    checkAndRefreshTokens().then(() => {
+      console.log('[Test] Initial token refresh completed');
+    }).catch(err => {
+      console.error('[Test] Error during initial token refresh:', err);
+    });
   });
 }
+
+// Run immediately for testing
+checkAndRefreshTokens().then(() => {
+  console.log('[Test] Initial token refresh completed');
+}).catch(err => {
+  console.error('[Test] Error during initial token refresh:', err);
+});

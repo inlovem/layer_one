@@ -11,7 +11,13 @@ const server = fastify({
   logger: process.env.NODE_ENV !== 'development',
 });
 
-const PORT = Number(process.env.PORT) || 8080;
+let PORT = Number(process.env.PORT) || 8080;
+if (process.env.NODE_ENV === 'development') {
+  // In development mode, use a fixed port for easier debugging
+  PORT = 3006;
+}
+
+
 
 // Register Swagger
 server.register(fastifySwagger, {

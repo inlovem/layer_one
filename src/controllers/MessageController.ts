@@ -18,9 +18,6 @@ export async function handleInboundEmail(message : EmailMessage){
 
 
 }
-
-
-
 export async function handleOutboundSMS(message : SMSMessage){
   // Handle outbound SMS message
   console.log("Handling outbound SMS:", message);

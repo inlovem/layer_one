@@ -8,7 +8,7 @@ export type LocationMember = {
 };
 
 
-export type Token = {
+export type AuthRes = {
     id?: string 
     access_token?: string; 
     expires_in?: number;
