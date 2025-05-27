@@ -1,41 +1,9 @@
-import axios from 'axios';
-import CryptoJS from 'crypto-js';
 import { AuthRes } from "../types/types";
 import admin from '../utils/firebase';
 import { Partial } from "@sinclair/typebox";
-import jwt from 'jsonwebtoken';
-import { FastifyRequest, FastifyReply } from "fastify";
 import { tokenService } from '../services/TokenService';
+import { Location as GHLLocation } from '../types/locationTypes';
 
-export interface Location {
-  _id: string;
-  address: string;
-  name: string;
-  isInstalled: boolean;
-  trial: {
-    onTrial: boolean;
-  };
-}
-
-export interface LocationToken {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
-  refresh_token: string;
-  scope: string;
-  userType: string;
-  companyId: string;
-  locationId: string;
-  userId: string;
-  traceId: string;
-}
-
-export interface LocationsResponse {
-  locations: Location[];
-  count: number;
-  installToFutureLocations: null | boolean;
-  traceId: string;
-}
 
 /**
  * Updates the locations in the database
@@ -55,33 +23,30 @@ export const locationRepos = {
    * @param appId - The app ID
    */
   async updateLocations(
-    locationsData: LocationsResponse,
+    locations: GHLLocation[],
     companyId: string
 ): Promise<void> {
+
+  console.log(`Updating locations for company, ${locations} locations`);
   const db = admin.firestore();
   const locationsRef = db.collection('locations');
   const companyLocationsRef = db.collection('companies').doc(companyId).collection('locations');
 
   // Save each location as a separate document
-  for (const location of locationsData.locations) {
+  for (const location of locations) {
     // Only process locations where isInstalled is true
     if (!location.isInstalled) {
       continue;
     }
-
     const locationData = {
       ...location,
       companyId,
-      count: locationsData.count,
-      installToFutureLocations: locationsData.installToFutureLocations,
-      traceId: locationsData.traceId,
       isInstalled: true, // Ensure isInstalled is set to true
       updatedAt: admin.firestore.FieldValue.serverTimestamp()
     };
 
     // Save location data to top-level locations collection
     await locationsRef.doc(location._id).set(locationData);
-
     // Also save location data to the company's locations subcollection
     await companyLocationsRef.doc(location._id).set(locationData);
   }
@@ -93,7 +58,7 @@ export const locationRepos = {
  * @param companyId - The ID of the company
  * @returns Array of location documents
  */
-async  getInstalledLocationsByCompanyId(companyId: string) {
+async  getInstalledLocationsByCompanyId(companyId: string): Promise<GHLLocation[]> {
   const db = admin.firestore();
   const locDocs = await db
     .collection('locations')
@@ -101,10 +66,16 @@ async  getInstalledLocationsByCompanyId(companyId: string) {
     .where('isInstalled', '==', true)        // ← skip locations not bound to the app
     .get();
   
+  console.log(`locDocs: ${locDocs}`);
+
+  if (locDocs.empty) {
+    return [];
+  }
+
   return locDocs.docs.map(doc => ({
-    id: doc.id,
+    _id: doc.id,
     ...doc.data()
-  }));
+  } as GHLLocation));
 },
 
 
@@ -206,5 +177,20 @@ async  getInstalledLocationsByCompanyId(companyId: string) {
       }
     },
 
+    /**
+     * Compares locations from GHL with locations in the database
+     * Returns locations that exist in GHL but not in the database
+     * 
+     * @param locationsInGHL - Locations data from GHL API
+     * @param locationsInDB - Locations data from database
+     * @returns Array of locations that exist in GHL but not in the database
+     * 
+     */
+    async compareLocations(locationsInGHL: GHLLocation[]): Promise<GHLLocation[]> {
+      const db = admin.firestore();
+      const locationsRef = db.collection('locations');
+      const locationsInDB = await locationsRef.get();
+      return locationsInGHL.filter(location => !locationsInDB.docs.some(dbLocation => dbLocation.id === location._id));
+    }
 }
 

@@ -1,4 +1,4 @@
-import { tokenRepos } from 'src/repositories/TokenRepos';
+import { tokenRepos } from '../../repositories/TokenRepos';
 import { messageService } from '../MessageService';
 import {
   EmailMessageDTO,

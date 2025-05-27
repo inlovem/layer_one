@@ -1,6 +1,8 @@
 // src/controllers/LocationController.ts
 import { FastifyRequest, FastifyReply } from "fastify";
-import { locationOrchestrator, CreateLocationDTO, UpdateLocationDTO, InstallParams } from "../services/orchestrators/LocationOrchestrator";
+import { locationOrchestrator } from "../services/orchestrators/LocationOrchestrator";
+import { CreateLocationDTO, UpdateLocationDTO, InstallParams } from "../types/locationTypes";
+import { installationOrchestrator } from "../services/orchestrators/InstallationOrchestrator";
 
 // Handler: POST /locations
 export async function createLocationHandler(
@@ -41,7 +43,8 @@ export async function installLocationHandler(
   try {
     const { id } = request.params;
     const params = request.body;
-    const result = await locationOrchestrator.install(id, params);
+    const result = await installationOrchestrator.processInstallation('', { locationId: id, companyId: params.companyId, appId: params.appId });
+
     return reply.send({ success: true, result });
   } catch (err: any) {
     request.log.error(err);

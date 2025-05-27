@@ -2,6 +2,7 @@ import axios from 'axios';
 import { AuthRes } from "../types/types";
 import { tokenRepos } from '../repositories/TokenRepos';
 import { locationService } from './LocationService';
+import { TokenData } from '../types/tokenTypes';
 
 
 
@@ -25,23 +26,8 @@ export const tokenService = {
     code?: string, 
     auth_res?: Partial<AuthRes>,
     auth_token?: string
-  ): Promise<{
-    access_token: string;
-    token_type: string;
-    expires_in: number;
-    refresh_token: string;
-    scope?: string;
-    userType: string;
-    locationId?: string;
-    companyId: string;
-    approvedLocations?: string[];
-    userId: string;
-    planId?: string;
-  }> {
-    console.log('📥 Getting GHL token with grant_type:', grant_type);
-    console.log('📥 Using code:', code)
-    console.log('📥 Using auth_res:', auth_res)
-    console.log('📥 Using auth_token:', auth_token);
+  ): Promise<TokenData> {
+
 
     const isLocationToken = Boolean(
       auth_res?.userType === 'Location' && 
@@ -58,16 +44,14 @@ export const tokenService = {
       if (!data || !data.access_token || !data.companyId) {
         throw new Error('Invalid token data received from GHL');
       }
-      console.log(`📥 ${isLocationToken ? 'Location' : 'Company'} token exchange success:`, data);
       
       await tokenRepos.updateAccessToken(data);
 
       if (!isLocationToken) {
         await locationService.getLocations(data.access_token, data.companyId, process.env.GOHL_APP_ID!);
-        console.log('Token updated successfully in Firestore', data);
       }
 
-      return data;
+      return data as TokenData;
 
     } catch (err: any) {
       this.logTokenError(err, isLocationToken);

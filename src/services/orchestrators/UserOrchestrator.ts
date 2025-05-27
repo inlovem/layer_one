@@ -1,5 +1,8 @@
 import { userService } from '../UserService';
-import { UserInput } from '../../types/userTypes';
+import { User, UserInput } from '../../types/userTypes';
+import { anythingLLM } from '../AnythingLLMService';
+import { contactService } from '../ContactService';
+import { UserIdWithWorkspace } from '../../types/llmTypes';
 
 /**
  * UserOrchestrator handles the orchestration of user-related operations
@@ -66,5 +69,49 @@ export const userOrchestrator = {
       console.error(`Error in userOrchestrator.upsert:`, error);
       throw new Error(`Failed to upsert user: ${error.message}`);
     }
-  }
+  },
+
+  /**
+   * Installs users for a given location
+   * 
+   * @param accessToken - The access token for the location
+   * @returns Promise that resolves when the users are installed
+   */
+  async installUsers(accessToken: string, locationId: string) {
+    const users = await userService.fetchUsers(
+      accessToken,
+      locationId
+    );
+
+    await userService.saveUsersBatch(users, locationId);
+    return users;
+  },
+
+  async installUsersLLM(users : UserIdWithWorkspace[]) {
+    let usersWithLLMId = [];
+    for (const user of users) {
+      const userWithLLMId = await anythingLLM.addUser(user.userId);
+      usersWithLLMId.push({
+        llmUserId: userWithLLMId.user.id,
+        workspaceId: user.id
+      });
+    }
+
+    console.log("usersWithLLMId: ", usersWithLLMId);
+
+    await anythingLLM.addWorkspace(usersWithLLMId.flatMap(user => user.workspaceId), "default", "default");
+
+    
+    const assignments = usersWithLLMId.flatMap(({ llmUserId, workspaceId }) =>
+      workspaceId.map(wsId => ({
+        llmUserId: String(llmUserId),  
+        workspaceId: wsId
+      }))
+    );
+
+    if (assignments.length > 0) {
+      await anythingLLM.assignWorkspaceToUsers(assignments);
+    }
+  },
+
 };

@@ -2,8 +2,9 @@ import axios from 'axios';
 import admin from '../utils/firebase';
 import { AuthRes } from '../types/types';
 import { tokenService } from './TokenService';
-import { locationRepos } from '../repositories/LocationRepos';
 import { tokenRepos } from '../repositories/TokenRepos';
+import { allLocations, LocationsResponse, Location as GHLLocation } from '../types/locationTypes';
+import { locationRepos } from '../repositories/LocationRepos';
 
 
 // Location Service
@@ -41,99 +42,70 @@ export const locationService = {
     /**
      * Fetches all locations for the given company from the GHL API.
      */
-    async getLocations(access_token: string, companyId: string, appId: string) {
-      if (!access_token || !companyId || !appId) {
+    async getLocations(
+      accessToken: string,
+      companyId: string,
+      appId: string
+    ): Promise<GHLLocation[]> {
+      if (!accessToken || !companyId || !appId) {
         throw new Error('Access token, company ID, and app ID are required');
       }
-      console.log('📥 Fetching locations for companyId:', companyId)
-      console.log('📥 Using appId:', appId);
-      console.log('📥 Using access_token:', access_token);
-  
-      interface Location {
-        _id: string;        // Location ID (e.g., "0IHuJvc2ofPAAA8GzTRi")
-        name: string;       // Name of the location (e.g., "John Deo")
-        address: string;    // Address linked to location (e.g., "47 W 13th St, New York, NY 10011, USA")
-        isInstalled: boolean; // Check if the requested app is installed for this location
-      }
-      
-      interface LocationsResponse {
-        locations: Location[];
-        count: number;      // Total location count under the company
-        installToFutureLocations: boolean | null; // Controls if app is automatically installed to future locations
-        traceId: string;
-      }
-      
-      let allLocations: LocationsResponse = { 
-        locations: [], 
-        count: 0, 
-        installToFutureLocations: null, 
-        traceId: '' 
-      };
-      let hasMore = true;
-      let limit = 100;
-      let skip = 0;
-  
-      while (hasMore) {
-        const queryParams = new URLSearchParams({
-          companyId: companyId,
-          appId: appId,
-          limit: limit.toString(),
-          skip: skip.toString()
-        });
     
-        const options = {
-          method: 'GET',
-          url: `https://services.leadconnectorhq.com/oauth/installedLocations?${queryParams.toString()}`,
-          headers: {
-            Authorization: `Bearer ${access_token}`,
-            Accept: 'application/json',
-            Version: '2021-07-28',
-          },
-        };
-        
-        try {
-          const response = await axios.request<LocationsResponse>(options);
-          if (!response.data) {
-            throw new Error('Invalid response data format');
+      const limit = 100;
+      let skip = 0;
+      const allItems: GHLLocation[] = [];         // ← local accumulator
+    
+      while (true) {
+        const params = new URLSearchParams({ companyId, appId, limit: String(limit), skip: String(skip) });
+        const { data } = await axios.get<LocationsResponse>(
+          `https://services.leadconnectorhq.com/oauth/installedLocations?${params}`,
+          {
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              Accept: 'application/json',
+              Version: '2021-07-28'
+            }
           }
-          
-          // Filter to only include locations where isInstalled is true
-          const installedLocations = response.data.locations.filter(location => location.isInstalled);
-          
-          // Merge the installed locations with the existing ones
-          allLocations.locations = [...allLocations.locations, ...installedLocations];
-          allLocations.count = response.data.count;
-          allLocations.installToFutureLocations = response.data.installToFutureLocations;
-          allLocations.traceId = response.data.traceId;
-          
-          // Check if we need to fetch more locations
-          if (response.data.locations.length < limit) {
-            hasMore = false;
-          } else {
-            skip += limit;
-          }
-          
-          console.log(`📥 Fetched ${installedLocations.length} installed locations out of ${response.data.locations.length}, total installed so far: ${allLocations.locations.length}`);
-          
-        } catch (error: any) {
-          console.error('Error fetching locations:', error.message);
-          throw error; // bubble up for visibility
-        }
+        );
+    
+        console.log(`fetched ${data.locations.length} locations; filtering for isInstalled…`);
+        const installedHere = data.locations.filter(l => l.isInstalled);
+        console.log(`→ ${installedHere.length} installed this page`, installedHere.map(l => l._id));
+    
+        allItems.push(...installedHere);
+    
+        // stop paging when the API returned fewer than `limit`
+        if (data.locations.length < limit) break;
+        skip += limit;
       }
-      
-      // Save all locations in a separate function
-      await this.saveLocations(allLocations, companyId);
-      return allLocations;
+    
+      console.log(`TOTAL installed locations: ${allItems.length}`);
+    
+      // map into GHLLocation & de‑dupe via your compareLocations
+      const ghls = allItems.map(loc => ({
+        _id: loc._id,
+        name: loc.name,
+        address: loc.address || '',
+        isInstalled: true,
+        trial: loc.trial,
+      }));
+    
+      return await locationRepos.compareLocations(ghls);
     },
+
+
     /**
      * Saves locations data to the database
      */
-    async saveLocations(locationsData: any, companyId: string) {
+    async saveLocations(
+      locations: GHLLocation[],
+      companyId: string
+    ) {
       try {
-        await locationRepos.updateLocations(locationsData, companyId);
+        await locationRepos.updateLocations(locations, companyId)
       } catch (error: any) {
-        console.error('Error saving locations:', error.message);
-        throw error;
+        console.error('Error saving locations:', error.message)
+        throw error
       }
     },
   
@@ -275,7 +247,6 @@ export const locationService = {
       if (!locationId) {
         throw new Error('Location ID is required');
       }
-      
       if (!installData.companyId || !installData.appId) {
         throw new Error('Company ID and App ID are required for installation');
       }
@@ -322,5 +293,6 @@ export const locationService = {
     },
 
 
-  }
 
+
+}

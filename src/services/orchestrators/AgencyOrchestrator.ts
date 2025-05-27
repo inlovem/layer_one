@@ -7,6 +7,7 @@ import { AgencyInput } from "../../types/agencyTypes";
  * and delegates to agencyService for persistence.
  */
 export const agencyOrchestrator = {
+  
   async install(input: AgencyInput) {
     const { companyId, appId } = input;
     if (!companyId || !appId) {

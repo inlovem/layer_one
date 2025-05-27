@@ -2,6 +2,7 @@ import { agencyRepos } from "../repositories/AgencyRepos";
 import { AgencyInput } from "../types/agencyTypes";
 import { tokenRepos } from "../repositories/TokenRepos";
 import { agencyOrchestrator } from "./orchestrators/AgencyOrchestrator";
+import { TokenData } from "../types/tokenTypes";
 
 // Create the Agency Service
 export const agencyService = {
@@ -51,7 +52,7 @@ export const agencyService = {
      * 
      * @param companyToken - The token data for the company.
      */
-    async handleCompanyInstallation(companyToken: any) {
+    async handleCompanyInstallation(companyToken: TokenData) {
         const companyData = {
             ...companyToken,
             type: 'INSTALL',

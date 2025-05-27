@@ -1,6 +1,6 @@
 import { contactService } from '../ContactService';
 import { FastifyError } from 'fastify';
-
+import { LocationWithToken } from '../../types/locationTypes'; 
 /**
  * ContactOrchestrator handles the orchestration of contact-related operations
  * including creation, updates, and deletion of contact data across the system.
@@ -60,6 +60,16 @@ export const contactOrchestrator = {
     } catch (error: any) {
       console.error(`Error in contactOrchestrator.delete:`, error);
       throw new Error(`Failed to delete contact: ${error.message}`);
+    }
+  },
+
+
+  async installContacts(locationTokens: LocationWithToken[]) {   // Fetch and save contacts from GHL
+    for (const locationToken of locationTokens) {
+      await contactService.fetchAndSaveContacts(
+        locationToken.access_token,
+        locationToken.locationId
+      );
     }
   }
 };

@@ -42,24 +42,32 @@ export const userRepos = {
     return batch;
   },
 
+  /**
+   * Saves multiple users to the database in a single batch
+   * 
+   * @param users - Array of users to save
+   * @param options - Additional options for saving
+   * @returns Promise that resolves when all users are saved
+   */
   async saveUsersBatch(
-    users: Array<{ userData: any; userId: string }>,
-    options: { merge?: boolean; companyId?: string; locationId?: string } = { merge: true }
+    users: User[],
+    options: { merge?: boolean; locationId?: string } = { merge: true }
   ): Promise<void> {
     const db = admin.firestore();
     const batch = db.batch();
   
-    users.forEach(({ userData, userId }) => {
+    users.forEach((user) => {
+      const userId = user.id;
       const mainRef = db.collection('users').doc(userId);
-      batch.set(mainRef, userData, { merge: options.merge });
+      batch.set(mainRef, user, { merge: options.merge });
   
-      if (options.companyId && options.locationId) {
+      if (options.locationId) {
         const nestedRef = db
           .collection('locations')
           .doc(options.locationId)
           .collection('users')
           .doc(userId);
-        batch.set(nestedRef, userData, { merge: options.merge });
+        batch.set(nestedRef, user, { merge: options.merge });
       }
     });
   
@@ -162,6 +170,49 @@ export const userRepos = {
     
     const doc = querySnapshot.docs[0];
     return { id: doc.id, ...doc.data() };
+  },
+
+  /**
+   * Retrieves all user IDs associated with a specific location
+   * 
+   * @param locationId - The ID of the location to get users for
+   * @returns An array of user IDs
+   */
+  async getUsersByLocationId(locationId: string): Promise<string[]> {
+    const db = admin.firestore();
+    
+    try {
+      console.log(`Fetching users for locationId: ${locationId}`);
+      
+      // First try to get users from the nested collection under the location
+      const locationUsersRef = db.collection('locations').doc(locationId).collection('users');
+      const querySnapshot = await locationUsersRef.get();
+      
+      if (!querySnapshot.empty) {
+        const userIds = querySnapshot.docs.map(doc => doc.id);
+        console.log(`Found ${userIds.length} users in locations/${locationId}/users`);
+        return userIds;
+      }
+      
+      // If no users found in nested collection, try the top-level users collection
+      console.log(`No users found in nested collection, checking top-level users collection`);
+      const topLevelUsersSnapshot = await db
+        .collection('users')
+        .where('locationId', '==', locationId)
+        .get();
+      
+      if (!topLevelUsersSnapshot.empty) {
+        const userIds = topLevelUsersSnapshot.docs.map(doc => doc.id);
+        console.log(`Found ${userIds.length} users in top-level users collection with locationId: ${locationId}`);
+        return userIds;
+      }
+      
+      console.log(`No users found for locationId: ${locationId} in any collection`);
+      return [];
+    } catch (error) {
+      console.error(`Error fetching users for locationId ${locationId}:`, error);
+      throw error;
+    }
   },
 
   /**

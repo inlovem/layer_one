@@ -1,64 +1,97 @@
-// src/services/InstallationService.ts
 import { tokenService } from '../TokenService';
 import { agencyService } from '../AgencyService';
-import { locationService } from '../LocationService';
 import { userService } from '../UserService';
 import { agencyOrchestrator } from './AgencyOrchestrator';
 import { locationOrchestrator } from './LocationOrchestrator';
 import { contactService } from '../ContactService';
-
+import { anythingLLM } from '../AnythingLLMService';
+import { userOrchestrator } from './UserOrchestrator';
+import { UserIdWithWorkspace } from '../../types/llmTypes';
+import { contactOrchestrator } from './ContactOrchestrator';
+import { tokenRepos } from '../../repositories/TokenRepos';
+import { TokenData } from '../../types/tokenTypes';
 interface InstallationResult {
   companyId: string;
-  // any other info you need to return
 }
 
-
+/**
+ * InstallationOrchestrator handles the orchestration of installation and uninstallation
+ * processes for companies and locations.
+ */
 export const installationOrchestrator = {
-  async processInstallation(code: string): Promise<InstallationResult> {
-    // 1. Exchange code for tokens & metadata
-    const companyToken = await tokenService.getGHLToken('authorization_code', code);
-  
-    // 2. Install company-level resources if needed
-    if (companyToken.userType === 'Company') {
-      await agencyService.handleCompanyInstallation(companyToken);
+
+  /**
+   * Processes the installation of a company and its locations
+   * 
+   * @param code - The authorization code from GHL
+   * @returns Promise with the installation result containing the company ID
+   */
+  async processInstallation(code?: string, installData?:{ locationId: string, companyId: string, appId: string}): Promise<InstallationResult> {
+
+    // GHL INSTALLATION from GHL Dashboard
+    // Exchange code for tokens & metadata
+    let companyToken: TokenData;
+    
+    if (code && code !== '') {
+      companyToken = await tokenService.getGHLToken('authorization_code', code);
+    // Install company-level resources if needed
+      if (companyToken.userType === 'Company') {
+        await agencyService.handleCompanyInstallation(companyToken);
+      }
+      if (!companyToken.companyId) {
+        throw new Error('Company ID is required');
+      }
     }
-    // 3. Provision all default locations
-    const locations = await locationService.getLocations(
-      companyToken.access_token, 
-      companyToken.companyId, 
-      process.env.GOHL_APP_ID!
+
+    // GHL INSTALLATION from GHL Webhook
+    // Exchange code for tokens & metadata
+    else if (installData) {
+      const token = await tokenRepos.getToken(installData.companyId, 'Company');
+      if (!token) {
+        throw new Error('Company token not found');
+      }
+      companyToken = token as TokenData;
+    } else {
+      throw new Error('Either code or locationId with installData is required');
+    }
+
+    if (!companyToken) {
+      throw new Error('Failed to obtain company token');
+    }
+
+
+    // Install locations
+    const locationTokens = await locationOrchestrator.batchInstall(companyToken)
+    console.log(`Installed ${locationTokens.length} locations for company ${companyToken.companyId}`);
+    // Install users
+    const usersWithLocations = await Promise.all(
+      locationTokens.map(async locationToken => {
+        const locationUsers = await userOrchestrator.installUsers(locationToken.access_token, locationToken.locationId);
+        return {
+          locationId: locationToken.locationId,
+          users: locationUsers
+        };
+      })
     );
 
-    // Process each location individually
-    for (const location of locations.locations) {
-      if (location.isInstalled) {
-        console.log(`Processing installed location: ${location._id}`);
-        // Create tokens for the location
-        const locationTokenResponse = await locationService.createTokensForLocation(
-          companyToken.companyId, 
-          companyToken.access_token,
-          location._id
-        );
-
-        // If the location has an access token, fetch and save users
-        if (locationTokenResponse.data?.access_token) {
-          console.log(`Fetching users for location: ${location._id}`);
-          await userService.fetchAndSaveUsers(
-            locationTokenResponse.data.access_token,
-            location._id,
-            companyToken.companyId,
-          );
-            // fetch and save contacts
-          await contactService.fetchAndSaveContacts(
-            locationTokenResponse.data.access_token,
-            location._id
-        );
-        }
+    // Install contacts
+    await contactOrchestrator.installContacts(locationTokens);
 
 
-      }
 
-    }
+
+
+
+    // LLM INSTALLATION
+
+    // Create an array of UserIdWithWorkspace objects, one for each location
+    const users: UserIdWithWorkspace[] = usersWithLocations.map(location => ({
+      userId: location.locationId,
+      id: location.users.map(user => user.id)
+    }));
+
+    // Install users in LLM
+    await userOrchestrator.installUsersLLM(users);
 
     return { companyId: companyToken.companyId! };
   },
@@ -70,43 +103,64 @@ export const installationOrchestrator = {
    * @param payload - The webhook payload containing uninstallation data
    * @returns Promise that resolves when uninstallation is complete
    */
-  async processUninstallation(payload: any): Promise<void> {
-    const { type, companyId, locationId } = payload;
-    
-    if (!type || type !== 'UNINSTALL') {
-      throw new Error('Invalid uninstallation payload type');
-    }
-    
+  async processUninstallation(payload: { type: string; companyId?: string; locationId?: string }): Promise<void> {
+    this.validateUninstallationPayload(payload);
+    const { companyId, locationId } = payload;
+
     try {
-      // Handle location-specific uninstallation
       if (locationId) {
-        console.log(`Processing uninstallation for location ${locationId}`);
-        await locationOrchestrator.uninstall(locationId);
-      } 
-      // Handle company-level uninstallation
-      else if (companyId) {
-        console.log(`Processing uninstallation for company ${companyId}`);
-        await agencyOrchestrator.uninstall(companyId);
+        await this.executeUninstallation(locationId, 'locationId');
+      } else if (companyId) {
+        await this.executeUninstallation(companyId, 'companyId');
       } else {
         throw new Error('Missing locationId or companyId in uninstallation payload');
       }
-      // Delete all users and location contancts for the location
-      if (locationId) {
-        await userService.deleteUsers(locationId, 'locationId');
-        await contactService.deleteContacts(locationId, 'locationId');
-      } else if (companyId) { 
-        await userService.deleteUsers(companyId, 'companyId');
-        await contactService.deleteContacts(companyId, 'companyId');
-      }
-      
-      
-      
+
       console.log('Uninstallation process completed successfully');
-    } catch (error: any) {
-      console.error('Error during uninstallation process:', error.message);
+    } catch (error) {
+      console.error('Error during uninstallation process:', (error as Error).message);
       throw error;
     }
   },
 
-  
+  /**
+   * Validates the uninstallation payload
+   * 
+   * @param payload - The webhook payload to validate
+   * @throws Error if the payload type is invalid
+   */
+  validateUninstallationPayload(payload: { type: string }): void {
+    if (payload.type !== 'UNINSTALL') {
+      throw new Error('Invalid uninstallation payload type');
+    }
+  },
+
+  /**
+   * Executes the uninstallation process for a location or company
+   * 
+   * @param id - The ID of the location or company to uninstall
+   * @param type - The type of entity being uninstalled ('locationId' or 'companyId')
+   */
+  async executeUninstallation(id: string, type: 'locationId' | 'companyId'): Promise<void> {
+    console.log(`Processing uninstallation for ${type === 'locationId' ? 'location' : 'company'} ${id}`);
+    
+    // Execute the appropriate orchestrator uninstall
+    if (type === 'locationId') {
+      await locationOrchestrator.uninstall(id);
+    } else {
+      await agencyOrchestrator.uninstall(id);
+    }
+    
+    // Delete associated data
+    const userIdList = await userService.getUserByLocationId(id);
+    await userService.deleteUsers(id, type);
+    await contactService.deleteContacts(id, type);
+    
+    // Handle AnythingLLM cleanup
+    await anythingLLM.deleteUser(id, type);
+    if (userIdList) {
+      await anythingLLM.deleteBatchWorkspace(userIdList, type);
+    }
+   
+  }
 };

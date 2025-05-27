@@ -1,11 +1,8 @@
 
 import { locationOrchestrator } from './orchestrators/LocationOrchestrator';
-import { agencyOrchestrator } from './orchestrators/AgencyOrchestrator';
 import { userOrchestrator } from './orchestrators/UserOrchestrator';
 import { installationOrchestrator } from './orchestrators/InstallationOrchestrator';
 import { contactOrchestrator } from './orchestrators/ContactOrchestrator';
-// import { contactService }      from './ContactService';
-// import { noteService }         from './NoteService';
 import {
  messageOrchestrator
 } from './orchestrators/MessageOrchestrator';
@@ -31,11 +28,11 @@ export async function handleGHLWebhook(payload: any): Promise<void> {
     messageType,
     ...rest
   } = payload;
-
   switch (type) {
+    
     case 'INSTALL':
       if (locationId) {
-        await locationOrchestrator.install(locationId, { companyId, appId });
+        await installationOrchestrator.processInstallation('', { locationId, companyId, appId });
       }
       break;
 
