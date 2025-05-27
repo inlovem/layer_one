@@ -2,7 +2,6 @@ import axios from 'axios';
 import { userRepos } from '../repositories/UserRepos';
 import { User, UsersResponse, UserInput } from '../types/userTypes';
 import { WorkspaceResponseWithMessageDTO } from '../types/dto/WorkspaceDTO';
-import { UserResponseDTO } from '../types/dto/UserDTO.js';
 export const userService = {
   /**
    * Fetches users for a specific location and saves them to the database
@@ -13,12 +12,19 @@ export const userService = {
    * @param addWorkspace - Optional callback function to create a workspace for the location
    * @returns The list of users fetched from the API
    */
-  async fetchUsers(
+  async fetchAndSaveUsers(
     access_token: string,
-    locationId: string
-  ): Promise<User[]> {
-
+    locationId: string,
+    companyId: string,
+    addUser?: (locationId: string, workspaceName: string, workspaceType: string) => Promise<void>,
+    addWorkspace?: (userId: string, workspaceName: string, workspaceType: string) => Promise<WorkspaceResponseWithMessageDTO>
+  ): Promise<{ users: User[], workspaceIds: string[] }> {
+    if (!locationId || !companyId) {
+      throw new Error('Location ID and Company ID are required');
+    }
+  
     try {
+      // Fetch users from the GHL API
       const options = {
         method: 'GET',
         url: 'https://services.leadconnectorhq.com/users/',
@@ -29,18 +35,39 @@ export const userService = {
           Accept: 'application/json'
         }
       };
-
       const { data } = await axios.request<UsersResponse>(options);
+  
       if (!data?.users) {
         throw new Error('Invalid response format from users API');
       }
+      console.log(`Fetched ${data.users.length} users for location ${locationId}`);
+  
+      // Transform into the shape your batch helper expects
       const usersToSave = data.users.map(u => ({
+        ...u,
         userData: u,
-        userId: u.id  // GHl user Id well use in our db
+        userId: u.id
       }));
   
-      return usersToSave.map(user => user.userData) as User[];
+      // Now call your batch helper
+      await userRepos.saveUsersBatch(usersToSave, { locationId });
 
+      // If addWorkspace callback is provided, create a workspace for the location
+     
+      if (addUser) {
+          await addUser(locationId, "default", "default")    
+      }
+     
+      let workspaceIds: string[] = [];
+      if (addWorkspace) {
+        await Promise.all(usersToSave.map(async (user) => {
+          const response = await addWorkspace(user.userId, "default", "default");
+          workspaceIds.push(response.workspace.id)
+          console.log(`Workspace added for user ${user.userId}: ${response}`);
+        }));
+      }
+  
+      return { users: data.users, workspaceIds };
     } catch (error: any) {
       console.error(`Error fetching users for location ${locationId}:`, error.message);
       throw error;
@@ -74,18 +101,6 @@ export const userService = {
       throw error;
     }
   },
-
-  /**
-   * Saves a batch of users to the database
-   * 
-   * @param users - The list of users to save
-   * @param locationId - The ID of the location the users belong to
-   * @param companyId - The ID of the company the location belongs to 
-   */
-  async saveUsersBatch(users: User[], locationId: string): Promise<void> {
-    await userRepos.saveUsersBatch(users, { locationId});
-  },  
-
  
   /**
    * Creates or updates a user in the database
