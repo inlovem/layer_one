@@ -2,6 +2,10 @@ import axios from 'axios';
 import { userRepos } from '../repositories/UserRepos';
 import { User, UsersResponse, UserInput } from '../types/userTypes';
 import { WorkspaceResponseWithMessageDTO } from '../types/dto/WorkspaceDTO';
+
+
+
+
 export const userService = {
   /**
    * Fetches users for a specific location and saves them to the database
@@ -70,6 +74,73 @@ export const userService = {
       return { users: data.users, workspaceIds };
     } catch (error: any) {
       console.error(`Error fetching users for location ${locationId}:`, error.message);
+      throw error;
+    }
+  },
+
+
+  /**
+   * Fetches users from the GHL API
+   * 
+   * @param access_token - The access token for API authentication
+   * @param locationId - The ID of the location to fetch users for
+   * @returns The list of users fetched from the API
+   */
+  async fetchUsers(access_token: string, locationId: string): Promise<User[]> {
+    if (!locationId) {
+      throw new Error('Location ID is required');
+    }
+
+    try {
+      const options = {
+        method: 'GET',
+        url: 'https://services.leadconnectorhq.com/users/',
+        params: { locationId },
+        headers: {
+          Authorization: `Bearer ${access_token}`,
+          Version: '2021-07-28',
+          Accept: 'application/json'
+        }
+      };
+      const { data } = await axios.request<UsersResponse>(options);
+
+      if (!data?.users) {
+        throw new Error('Invalid response format from users API');
+      }
+      console.log(`Fetched ${data.users.length} users for location ${locationId}`);
+      return data.users;
+    } catch (error: any) {
+      console.error(`Error fetching users for location ${locationId}:`, error.message);
+      throw error;
+    }
+  },
+
+  /**
+   * Saves a batch of users to the database
+   * 
+   * @param users - The list of users to save
+   * @param locationId - The ID of the location the users belong to
+   */
+  async saveUsersBatch(users: User[], locationId: string): Promise<void> {
+    if (!users || users.length === 0) {
+      console.warn('No users to save');
+      return;
+    }
+    if (!locationId) {
+      throw new Error('Location ID is required');
+    }
+    try {
+      // Add locationId to each user
+      const enrichedUsers = users.map(user => ({
+        ...user,
+        locationId,
+        updatedAt: new Date()
+      }));
+      // Save users to the database using the repository
+      await userRepos.saveUsersBatch(enrichedUsers, { locationId });
+      console.log(`Successfully saved ${users.length} users for location ${locationId}`);
+    } catch (error: any) {
+      console.error(`Error saving users for location ${locationId}:`, error.message);
       throw error;
     }
   },

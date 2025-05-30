@@ -31,9 +31,11 @@ export const installationOrchestrator = {
     // GHL INSTALLATION from GHL Dashboard
     // Exchange code for tokens & metadata
     let companyToken: TokenData;
+   
     
     if (code && code !== '') {
       companyToken = await tokenService.getGHLToken('authorization_code', code);
+   
     // Install company-level resources if needed
       if (companyToken.userType === 'Company') {
         await agencyService.handleCompanyInstallation(companyToken);
@@ -66,6 +68,7 @@ export const installationOrchestrator = {
     // Install users
     const usersWithLocations = await Promise.all(
       locationTokens.map(async locationToken => {
+        console.log(locationToken.access_token);
         const locationUsers = await userOrchestrator.installUsers(locationToken.access_token, locationToken.locationId);
         return {
           locationId: locationToken.locationId,
@@ -78,19 +81,15 @@ export const installationOrchestrator = {
     await contactOrchestrator.installContacts(locationTokens);
 
 
-
-
-
-
     // LLM INSTALLATION
 
     // Create an array of UserIdWithWorkspace objects, one for each location
     const users: UserIdWithWorkspace[] = usersWithLocations.map(location => ({
       userId: location.locationId,
-      id: location.users.map(user => user.id)
+      id: location.users.map((user:any) => user.id)
     }));
 
-    // Install users in LLM
+    // Install users in LLM 
     await userOrchestrator.installUsersLLM(users);
 
     return { companyId: companyToken.companyId! };
